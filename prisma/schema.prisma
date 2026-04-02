@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Group {
+  id           String        @id @default(cuid())
+  name         String
+  inviteCode   String        @unique
+  createdAt    DateTime      @default(now())
+  members      Member[]
+  preferences  Preference[]
+  destinations Destination[]
+  costSplits   CostSplit[]
+}
+
+model Member {
+  id          String       @id @default(cuid())
+  name        String
+  groupId     String
+  group       Group        @relation(fields: [groupId], references: [id])
+  preferences Preference[]
+  votes       Vote[]
+}
+
+// vibe stores one of: BEACH | CITY | NATURE | PARTY | CULTURE | ADVENTURE
+model Preference {
+  id                String   @id @default(cuid())
+  memberId          String
+  member            Member   @relation(fields: [memberId], references: [id])
+  groupId           String
+  group             Group    @relation(fields: [groupId], references: [id])
+  budgetMin         Int
+  budgetMax         Int
+  departureDateFrom DateTime
+  departureDateTo   DateTime
+  tripDurationDays  Int
+  vibe              String
+  travelMonth       String
+}
+
+model Destination {
+  id        String   @id @default(cuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  name      String
+  country   String
+  reasoning String
+  score     Float
+  createdAt DateTime @default(now())
+  votes     Vote[]
+}
+
+// value stores one of: UP | DOWN
+model Vote {
+  id            String      @id @default(cuid())
+  memberId      String
+  member        Member      @relation(fields: [memberId], references: [id])
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id])
+  value         String
+
+  @@unique([memberId, destinationId])
+}
+
+model CostSplit {
+  id              String   @id @default(cuid())
+  groupId         String
+  group           Group    @relation(fields: [groupId], references: [id])
+  label           String
+  totalAmount     Float
+  memberCount     Int
+  amountPerPerson Float
+  createdAt       DateTime @default(now())
+}

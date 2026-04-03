@@ -3,29 +3,25 @@
 import { useState, useEffect } from "react";
 
 const SLIDES = [
-  {
-    src: "https://loremflickr.com/1920/1080/beach,tropical,ocean?lock=11",
-    label: "Beach",
-  },
-  {
-    src: "https://loremflickr.com/1920/1080/city,europe,architecture?lock=22",
-    label: "City",
-  },
-  {
-    src: "https://loremflickr.com/1920/1080/mountains,alps,snow?lock=33",
-    label: "Mountains",
-  },
-  {
-    src: "https://loremflickr.com/1920/1080/mediterranean,coast,sea?lock=44",
-    label: "Coast",
-  },
-  {
-    src: "https://loremflickr.com/1920/1080/tuscany,countryside,landscape?lock=55",
-    label: "Countryside",
-  },
+  { src: "https://loremflickr.com/1920/1080/maldives,beach,turquoise?lock=101",  label: "Maldives" },
+  { src: "https://loremflickr.com/1920/1080/santorini,greece,sunset?lock=102",   label: "Santorini" },
+  { src: "https://loremflickr.com/1920/1080/newyork,skyline,night?lock=103",     label: "New York" },
+  { src: "https://loremflickr.com/1920/1080/dolomites,mountains,italy?lock=104", label: "Dolomites" },
+  { src: "https://loremflickr.com/1920/1080/bali,tropical,beach?lock=105",       label: "Bali" },
+  { src: "https://loremflickr.com/1920/1080/paris,france,eiffel?lock=106",       label: "Paris" },
+  { src: "https://loremflickr.com/1920/1080/amalfi,coast,cliffs?lock=107",       label: "Amalfi Coast" },
+  { src: "https://loremflickr.com/1920/1080/swiss,alps,lake?lock=108",           label: "Swiss Alps" },
+  { src: "https://loremflickr.com/1920/1080/dubai,skyline,city?lock=109",        label: "Dubai" },
+  { src: "https://loremflickr.com/1920/1080/caribbean,beach,palm?lock=110",      label: "Caribbean" },
+  { src: "https://loremflickr.com/1920/1080/tokyo,japan,night?lock=111",         label: "Tokyo" },
+  { src: "https://loremflickr.com/1920/1080/patagonia,mountains,lake?lock=112",  label: "Patagonia" },
+  { src: "https://loremflickr.com/1920/1080/iceland,waterfall,landscape?lock=113", label: "Iceland" },
+  { src: "https://loremflickr.com/1920/1080/barcelona,sea,city?lock=114",        label: "Barcelona" },
+  { src: "https://loremflickr.com/1920/1080/fjord,norway,mountains?lock=115",    label: "Norway" },
+  { src: "https://loremflickr.com/1920/1080/croatia,sea,coast?lock=116",         label: "Croatia" },
 ];
 
-const INTERVAL_MS = 5000;
+const INTERVAL_MS = 4500;
 
 export default function DestinationSlideshow() {
   const [current, setCurrent] = useState(0);

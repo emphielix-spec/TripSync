@@ -209,20 +209,45 @@ export async function POST(
     } else {
       // ── Real mode: call Claude API ──────────────────────────────
       const memberLines = preferences
-        .map(
-          (p) =>
-            `- ${p.member.name}: Budget €${p.budgetMin}–€${p.budgetMax}, travel month: ${p.travelMonth}, trip length: ${p.tripDurationDays} days, vibe preference: ${p.vibe}`
-        )
+        .map((p) => {
+          const yesAnswers = [
+            p.wantsBeach        && "beach holiday",
+            p.wantsNightlife    && "nightlife",
+            p.okLongFlights     && "okay with long flights",
+            p.wantsOutdoor      && "outdoor activities",
+            p.prefersCity       && "prefers city",
+            p.budgetPriority    && "budget-conscious",
+            p.wantsRoadTrip     && "open to road trip",
+            p.wantsWarmWeather  && "wants warm weather",
+            p.openToOffbeat     && "open to offbeat destinations",
+            p.wantsAllInclusive && "all-inclusive/resort",
+          ].filter(Boolean).join(", ");
+
+          const noAnswers = [
+            !p.wantsBeach        && "no beach",
+            !p.wantsNightlife    && "no nightlife",
+            !p.okLongFlights     && "short flights only",
+            !p.wantsOutdoor      && "no outdoor activities",
+            !p.prefersCity       && "prefers nature over city",
+            !p.budgetPriority    && "budget not top priority",
+            !p.wantsRoadTrip     && "no road trips",
+            !p.wantsWarmWeather  && "cool weather okay",
+            !p.openToOffbeat     && "prefers popular destinations",
+            !p.wantsAllInclusive && "no all-inclusive",
+          ].filter(Boolean).join(", ");
+
+          return `- ${p.member.name}: Budget €${p.budgetMin}–€${p.budgetMax}, departure ${p.departureDateFrom.toISOString().slice(0, 10)} to ${p.departureDateTo.toISOString().slice(0, 10)}, trip length: ${p.tripDurationDays} days, vibe: ${p.vibe}${yesAnswers ? `, wants: ${yesAnswers}` : ""}${noAnswers ? `, does not want: ${noAnswers}` : ""}`;
+        })
         .join("\n");
 
       const userMessage = `A group of ${preferences.length} friends are planning a trip together. Here are their individual preferences:
 
 ${memberLines}
 
-Based on these preferences, suggest the 3 best destinations for this group. For each destination return:
+Based on these preferences, suggest the 3 best destinations for this group that balance everyone's needs. For each destination return:
 - name (city or region)
 - country
-- reasoning (2-3 sentences explaining why it fits the group)
+- reasoning (2-3 sentences explaining why it fits the group, referencing specific preferences)
 - score (a float from 0.0 to 10.0 indicating how well it fits)
 
 Respond ONLY with a JSON array in this format:

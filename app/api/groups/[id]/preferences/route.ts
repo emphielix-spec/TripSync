@@ -19,7 +19,17 @@ export async function POST(
       departureDateTo,
       tripDurationDays,
       vibe,
-      travelMonth,
+      // Yes/No questions
+      wantsBeach,
+      wantsNightlife,
+      okLongFlights,
+      wantsOutdoor,
+      prefersCity,
+      budgetPriority,
+      wantsRoadTrip,
+      wantsWarmWeather,
+      openToOffbeat,
+      wantsAllInclusive,
     } = body;
 
     if (!memberId || typeof memberId !== "string") {
@@ -66,12 +76,6 @@ export async function POST(
         { status: 400 }
       );
     }
-    if (!travelMonth || typeof travelMonth !== "string") {
-      return NextResponse.json(
-        { error: "travelMonth is required" },
-        { status: 400 }
-      );
-    }
 
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     if (!group) {
@@ -101,7 +105,16 @@ export async function POST(
         departureDateTo: dateTo,
         tripDurationDays: Math.floor(tripDurationDays),
         vibe,
-        travelMonth: travelMonth.trim(),
+        wantsBeach: Boolean(wantsBeach),
+        wantsNightlife: Boolean(wantsNightlife),
+        okLongFlights: Boolean(okLongFlights),
+        wantsOutdoor: Boolean(wantsOutdoor),
+        prefersCity: Boolean(prefersCity),
+        budgetPriority: Boolean(budgetPriority),
+        wantsRoadTrip: Boolean(wantsRoadTrip),
+        wantsWarmWeather: Boolean(wantsWarmWeather),
+        openToOffbeat: Boolean(openToOffbeat),
+        wantsAllInclusive: Boolean(wantsAllInclusive),
       },
     });
 

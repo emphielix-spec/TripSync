@@ -862,6 +862,127 @@ select.input { cursor: pointer; }
   gap: 1.5rem;
 }
 
+/* ─── Yes/No question pills ──────────────────────────────────── */
+.yn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.yn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.yn-row:last-child {
+  border-bottom: none;
+}
+
+.yn-label {
+  font-size: 0.875rem;
+  color: var(--text);
+  flex: 1;
+  line-height: 1.4;
+}
+
+.yn-pills {
+  display: flex;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.yn-pill {
+  padding: 0.3125rem 0.875rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: white;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.yn-pill:hover {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.yn-pill.yn-yes.selected {
+  background: #DCFCE7;
+  border-color: #16A34A;
+  color: #15803D;
+}
+
+.yn-pill.yn-no.selected {
+  background: #FEE2E2;
+  border-color: #DC2626;
+  color: #B91C1C;
+}
+
+/* ─── Preferences summary (Results tab) ──────────────────────── */
+.prefs-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.prefs-summary-card {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.prefs-summary-name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.prefs-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prefs-summary-meta span {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.625rem;
+}
+
+.prefs-yn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+
+.prefs-yn-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.prefs-yn-icon {
+  flex-shrink: 0;
+}
+
+.prefs-yn-label {
+  color: var(--text-muted);
+}
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .hero-title { font-size: 44px; }

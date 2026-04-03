@@ -21,10 +21,20 @@ const VIBE_LABELS: Record<Vibe, string> = {
   ADVENTURE: "⛰️ Adventure",
 };
 
-const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
-];
+const YES_NO_QUESTIONS = [
+  { key: "wantsBeach",        label: "Do you want a beach holiday?" },
+  { key: "wantsNightlife",    label: "Do you want nightlife / going out?" },
+  { key: "okLongFlights",     label: "Are you okay with long flights? (4+ hours)" },
+  { key: "wantsOutdoor",      label: "Do you want outdoor activities? (hiking, watersports etc.)" },
+  { key: "prefersCity",       label: "Do you prefer a city over nature?" },
+  { key: "budgetPriority",    label: "Is budget the most important factor for you?" },
+  { key: "wantsRoadTrip",     label: "Would you consider a road trip style holiday?" },
+  { key: "wantsWarmWeather",  label: "Do you want warm weather? (25°C+)" },
+  { key: "openToOffbeat",     label: "Are you open to visiting a less touristy destination?" },
+  { key: "wantsAllInclusive", label: "Do you want all-inclusive or resort style?" },
+] as const;
+
+type YesNoKey = (typeof YES_NO_QUESTIONS)[number]["key"];
 
 interface Destination {
   id: string;
@@ -45,6 +55,17 @@ interface SplitEntry {
   totalAmount: number;
   memberCount: number;
   amountPerPerson: number;
+}
+
+interface PrefSummaryEntry {
+  memberName: string;
+  budgetMin: number;
+  budgetMax: number;
+  departureDateFrom: string;
+  departureDateTo: string;
+  tripDurationDays: number;
+  vibe: string;
+  questions: { key: string; label: string; answer: boolean }[];
 }
 
 // ─── Animation variants ───────────────────────────────────────
@@ -78,9 +99,21 @@ export default function GroupPage({ params }: { params: { id: string } }) {
 
   // ── Preferences ──────────────────────────────────────────────
   const [prefs, setPrefs] = useState({
-    budgetMin: "", budgetMax: "", travelMonth: "",
+    budgetMin: "", budgetMax: "",
     tripDurationDays: "", vibe: "" as Vibe | "",
     departureDateFrom: "", departureDateTo: "",
+  });
+  const [yesNo, setYesNo] = useState<Record<YesNoKey, boolean | null>>({
+    wantsBeach: null,
+    wantsNightlife: null,
+    okLongFlights: null,
+    wantsOutdoor: null,
+    prefersCity: null,
+    budgetPriority: null,
+    wantsRoadTrip: null,
+    wantsWarmWeather: null,
+    openToOffbeat: null,
+    wantsAllInclusive: null,
   });
   const [prefsStatus, setPrefsStatus] = useState<AsyncStatus>("idle");
   const [prefsError, setPrefsError] = useState("");
@@ -96,6 +129,8 @@ export default function GroupPage({ params }: { params: { id: string } }) {
   const [results, setResults] = useState<DestinationResult[]>([]);
   const [resultsStatus, setResultsStatus] = useState<AsyncStatus>("idle");
   const [resultsError, setResultsError] = useState("");
+  const [prefsSummary, setPrefsSummary] = useState<PrefSummaryEntry[]>([]);
+  const [prefsSummaryStatus, setPrefsSummaryStatus] = useState<AsyncStatus>("idle");
 
   // ── Cost Split ────────────────────────────────────────────────
   const [splitForm, setSplitForm] = useState({ label: "", totalAmount: "", memberCount: "" });
@@ -108,6 +143,15 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     setMemberId(localStorage.getItem("ts_memberId"));
     setMemberName(localStorage.getItem("ts_memberName"));
   }, []);
+
+  // Auto-load results + prefs summary when switching to results tab
+  useEffect(() => {
+    if (tab === "results") {
+      fetchResults();
+      fetchPrefsSummary();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   // ─── Preferences ─────────────────────────────────────────────
   async function submitPreferences(e: React.FormEvent) {
@@ -131,7 +175,17 @@ export default function GroupPage({ params }: { params: { id: string } }) {
             : new Date().toISOString(),
           tripDurationDays: Number(prefs.tripDurationDays),
           vibe: prefs.vibe,
-          travelMonth: prefs.travelMonth,
+          // Convert null → false for unanswered questions
+          wantsBeach:        yesNo.wantsBeach ?? false,
+          wantsNightlife:    yesNo.wantsNightlife ?? false,
+          okLongFlights:     yesNo.okLongFlights ?? false,
+          wantsOutdoor:      yesNo.wantsOutdoor ?? false,
+          prefersCity:       yesNo.prefersCity ?? false,
+          budgetPriority:    yesNo.budgetPriority ?? false,
+          wantsRoadTrip:     yesNo.wantsRoadTrip ?? false,
+          wantsWarmWeather:  yesNo.wantsWarmWeather ?? false,
+          openToOffbeat:     yesNo.openToOffbeat ?? false,
+          wantsAllInclusive: yesNo.wantsAllInclusive ?? false,
         }),
       });
       const data = await res.json();
@@ -194,6 +248,19 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     }
   }
 
+  async function fetchPrefsSummary() {
+    setPrefsSummaryStatus("loading");
+    try {
+      const res = await fetch(`/api/groups/${groupId}/preferences-summary`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch preferences");
+      setPrefsSummary(data);
+      setPrefsSummaryStatus("success");
+    } catch {
+      setPrefsSummaryStatus("error");
+    }
+  }
+
   // ─── Cost Split ───────────────────────────────────────────────
   async function submitSplit(e: React.FormEvent) {
     e.preventDefault();
@@ -227,6 +294,8 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     { key: "split",       label: "Cost Split" },
   ];
 
+  const allYesNoAnswered = YES_NO_QUESTIONS.every((q) => yesNo[q.key] !== null);
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)" }}>
       {/* ── Navbar ──────────────────────────────────────────── */}
@@ -234,9 +303,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
         <div className="navbar-inner">
           <button
             onClick={() => router.push("/")}
-            style={{
-              background: "none", border: "none", cursor: "pointer", padding: 0,
-            }}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
             <span className="nav-brand">TripSync</span>
           </button>
@@ -297,16 +364,6 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                   </div>
 
                   <div className="field">
-                    <label className="field-label" htmlFor="travelMonth">Travel month</label>
-                    <select id="travelMonth" className="input"
-                      value={prefs.travelMonth}
-                      onChange={(e) => setPrefs({ ...prefs, travelMonth: e.target.value })} required>
-                      <option value="">Select a month…</option>
-                      {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="field">
                     <label className="field-label">Departure window</label>
                     <div className="input-row">
                       <input className="input" type="date"
@@ -338,8 +395,41 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                     </div>
                   </div>
 
+                  {/* Yes/No Questions */}
+                  <div className="field" style={{ marginBottom: "1.5rem" }}>
+                    <label className="field-label">A few quick questions</label>
+                    <div className="yn-list">
+                      {YES_NO_QUESTIONS.map((q) => (
+                        <div key={q.key} className="yn-row">
+                          <span className="yn-label">{q.label}</span>
+                          <div className="yn-pills">
+                            <button
+                              type="button"
+                              className={`yn-pill yn-yes${yesNo[q.key] === true ? " selected" : ""}`}
+                              onClick={() => setYesNo((p) => ({ ...p, [q.key]: true }))}
+                            >
+                              Yes
+                            </button>
+                            <button
+                              type="button"
+                              className={`yn-pill yn-no${yesNo[q.key] === false ? " selected" : ""}`}
+                              onClick={() => setYesNo((p) => ({ ...p, [q.key]: false }))}
+                            >
+                              No
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {!allYesNoAnswered && (
+                      <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                        Answer all questions above to continue.
+                      </p>
+                    )}
+                  </div>
+
                   <button type="submit" className="btn btn-primary btn-full"
-                    disabled={prefsStatus === "loading" || !memberId || !prefs.vibe}>
+                    disabled={prefsStatus === "loading" || !memberId || !prefs.vibe || !allYesNoAnswered}>
                     {prefsStatus === "loading" ? "Saving…" : "Save my preferences"}
                   </button>
                 </form>
@@ -441,6 +531,46 @@ export default function GroupPage({ params }: { params: { id: string } }) {
           {/* ── Results ─────────────────────────────────────── */}
           {tab === "results" && (
             <motion.div key="results" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+
+              {/* Group preferences summary */}
+              <div className="section-card" style={{ marginBottom: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                  <h2 className="section-title" style={{ margin: 0 }}>Group preferences</h2>
+                  {prefsSummaryStatus === "loading" && (
+                    <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Loading…</span>
+                  )}
+                </div>
+
+                {prefsSummaryStatus === "success" && prefsSummary.length === 0 && (
+                  <div className="empty">No preferences submitted yet.</div>
+                )}
+
+                {prefsSummary.length > 0 && (
+                  <div className="prefs-summary-list">
+                    {prefsSummary.map((p) => (
+                      <div key={p.memberName} className="prefs-summary-card">
+                        <div className="prefs-summary-name">{p.memberName}</div>
+                        <div className="prefs-summary-meta">
+                          <span>💰 €{p.budgetMin}–€{p.budgetMax}</span>
+                          <span>📅 {new Date(p.departureDateFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – {new Date(p.departureDateTo).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                          <span>🗓️ {p.tripDurationDays} days</span>
+                          <span>✈️ {p.vibe.charAt(0) + p.vibe.slice(1).toLowerCase()}</span>
+                        </div>
+                        <div className="prefs-yn-list">
+                          {p.questions.map((q) => (
+                            <div key={q.key} className="prefs-yn-row">
+                              <span className="prefs-yn-icon">{q.answer ? "✅" : "❌"}</span>
+                              <span className="prefs-yn-label">{q.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Vote results */}
               <div className="section-card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
                   <h2 className="section-title" style={{ margin: 0 }}>Vote results</h2>
@@ -452,11 +582,11 @@ export default function GroupPage({ params }: { params: { id: string } }) {
 
                 {resultsError && <div className="notice notice-error">{resultsError}</div>}
 
-                {resultsStatus === "idle" && results.length === 0 && (
-                  <div className="empty">Hit Refresh to load the current standings.</div>
-                )}
                 {resultsStatus === "loading" && results.length === 0 && (
                   <div className="spinner-wrap"><div className="spinner" /></div>
+                )}
+                {resultsStatus === "success" && results.length === 0 && (
+                  <div className="empty">No destinations voted on yet. Head to AI Match to get started.</div>
                 )}
               </div>
 

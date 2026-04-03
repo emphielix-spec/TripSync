@@ -44,7 +44,17 @@ model Preference {
   departureDateTo   DateTime
   tripDurationDays  Int
   vibe              String
-  travelMonth       String
+  // Yes/No travel questions
+  wantsBeach        Boolean  @default(false)
+  wantsNightlife    Boolean  @default(false)
+  okLongFlights     Boolean  @default(false)
+  wantsOutdoor      Boolean  @default(false)
+  prefersCity       Boolean  @default(false)
+  budgetPriority    Boolean  @default(false)
+  wantsRoadTrip     Boolean  @default(false)
+  wantsWarmWeather  Boolean  @default(false)
+  openToOffbeat     Boolean  @default(false)
+  wantsAllInclusive Boolean  @default(false)
 }
 
 model Destination {

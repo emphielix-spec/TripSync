@@ -2,65 +2,77 @@
 
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import DestinationSlideshow from "@/app/components/DestinationSlideshow";
+
+const HOW_IT_WORKS = [
+  { icon: "🧑‍🤝‍🧑", text: "Create a group and share the invite code with your friends" },
+  { icon: "🗺️", text: "Everyone fills in their budget, dates, and travel preferences" },
+  { icon: "🤖", text: "AI picks the 3 best destinations that work for everyone" },
+  { icon: "🗳️", text: "Vote on your favourites — the top pick wins" },
+  { icon: "💸", text: "Split costs right in the app, no spreadsheets needed" },
+];
 
 export default function Home() {
   const router = useRouter();
 
   return (
-    <div className="hero">
-      <div className="hero-inner">
+    <div className="landing">
+      {/* ── Background slideshow ───────────────────────────────── */}
+      <DestinationSlideshow />
+
+      {/* ── Content ───────────────────────────────────────────── */}
+      <div className="landing-inner">
 
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          className="landing-logo"
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <span className="hero-badge">✈️ Group travel, made easy</span>
-        </motion.div>
-
-        <motion.h1
-          className="hero-title"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.07, ease: "easeOut" }}
-        >
-          Trip<span>Sync</span>
-        </motion.h1>
-
-        <motion.p
-          className="hero-tagline"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.14, ease: "easeOut" }}
-        >
-          AI-powered destination matching for groups.<br />
-          Everyone votes, no one argues.
-        </motion.p>
-
-        <motion.div
-          className="hero-features"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.22, ease: "easeOut" }}
-        >
-          <span>🤖 AI matching</span>
-          <span>🗳️ Group voting</span>
-          <span>💸 Cost split</span>
-          <span>🔒 No account needed</span>
+          TripSync
         </motion.div>
 
         <motion.div
-          className="hero-buttons"
-          initial={{ opacity: 0, y: 16 }}
+          className="landing-content"
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.28, ease: "easeOut" }}
+          transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
         >
-          <button className="btn-hero-primary" onClick={() => router.push("/create")}>
-            Create a group
-          </button>
-          <button className="btn-hero" onClick={() => router.push("/join")}>
-            Join with a code
-          </button>
+          <h1 className="landing-title">
+            Plan your group trip.<br />
+            <span>Without the chaos.</span>
+          </h1>
+
+          <p className="landing-subtitle">
+            One app. Everyone agrees on where to go.
+          </p>
+
+          <ul className="landing-steps">
+            {HOW_IT_WORKS.map((step, i) => (
+              <motion.li
+                key={i}
+                className="landing-step"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 + i * 0.07, ease: "easeOut" }}
+              >
+                <span className="step-icon">{step.icon}</span>
+                <span>{step.text}</span>
+              </motion.li>
+            ))}
+          </ul>
+
+          <motion.button
+            className="landing-cta"
+            onClick={() => router.push("/start")}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: 0.75, ease: "easeOut" }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            Let&apos;s start →
+          </motion.button>
         </motion.div>
 
       </div>

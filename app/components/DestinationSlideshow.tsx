@@ -2,84 +2,89 @@
 
 import { useState, useEffect } from "react";
 
-const SLIDES = [
-  { src: "https://loremflickr.com/1920/1080/maldives,beach,turquoise?lock=101",  label: "Maldives" },
-  { src: "https://loremflickr.com/1920/1080/santorini,greece,sunset?lock=102",   label: "Santorini" },
-  { src: "https://loremflickr.com/1920/1080/newyork,skyline,night?lock=103",     label: "New York" },
-  { src: "https://loremflickr.com/1920/1080/dolomites,mountains,italy?lock=104", label: "Dolomites" },
-  { src: "https://loremflickr.com/1920/1080/bali,tropical,beach?lock=105",       label: "Bali" },
-  { src: "https://loremflickr.com/1920/1080/paris,france,eiffel?lock=106",       label: "Paris" },
-  { src: "https://loremflickr.com/1920/1080/amalfi,coast,cliffs?lock=107",       label: "Amalfi Coast" },
-  { src: "https://loremflickr.com/1920/1080/swiss,alps,lake?lock=108",           label: "Swiss Alps" },
-  { src: "https://loremflickr.com/1920/1080/dubai,skyline,city?lock=109",        label: "Dubai" },
-  { src: "https://loremflickr.com/1920/1080/caribbean,beach,palm?lock=110",      label: "Caribbean" },
-  { src: "https://loremflickr.com/1920/1080/tokyo,japan,night?lock=111",         label: "Tokyo" },
-  { src: "https://loremflickr.com/1920/1080/patagonia,mountains,lake?lock=112",  label: "Patagonia" },
-  { src: "https://loremflickr.com/1920/1080/iceland,waterfall,landscape?lock=113", label: "Iceland" },
-  { src: "https://loremflickr.com/1920/1080/barcelona,sea,city?lock=114",        label: "Barcelona" },
-  { src: "https://loremflickr.com/1920/1080/fjord,norway,mountains?lock=115",    label: "Norway" },
-  { src: "https://loremflickr.com/1920/1080/croatia,sea,coast?lock=116",         label: "Croatia" },
+const ALL_SLIDES = [
+  { src: "/slides/slide-01.jpg", label: "Tropical Beach" },
+  { src: "/slides/slide-02.jpg", label: "Barcelona" },
+  { src: "/slides/slide-03.jpg", label: "Paris" },
+  { src: "/slides/slide-04.jpg", label: "Mountain Forest" },
+  { src: "/slides/slide-05.jpg", label: "Iceland Aurora" },
+  { src: "/slides/slide-06.jpg", label: "Destination 6" },
+  { src: "/slides/slide-07.jpg", label: "Destination 7" },
+  { src: "/slides/slide-08.jpg", label: "Destination 8" },
+  { src: "/slides/slide-09.jpg", label: "Destination 9" },
+  { src: "/slides/slide-10.jpg", label: "Destination 10" },
 ];
 
-const INTERVAL_MS = 4500;
+const INTERVAL_MS = 5000;
 
 export default function DestinationSlideshow() {
   const [current, setCurrent] = useState(0);
-  const [loaded, setLoaded] = useState<boolean[]>(SLIDES.map(() => false));
+  // null = pending, true = loaded, false = failed/missing
+  const [status, setStatus] = useState<(null | boolean)[]>(ALL_SLIDES.map(() => null));
 
-  // Preload all images on mount
   useEffect(() => {
-    SLIDES.forEach((slide, i) => {
+    ALL_SLIDES.forEach((slide, i) => {
       const img = new Image();
-      img.onload = () =>
-        setLoaded((prev) => {
-          const next = [...prev];
-          next[i] = true;
-          return next;
-        });
+      img.onload  = () => setStatus((p) => { const n = [...p]; n[i] = true;  return n; });
+      img.onerror = () => setStatus((p) => { const n = [...p]; n[i] = false; return n; });
       img.src = slide.src;
     });
   }, []);
 
+  // Only cycle through slides that successfully loaded
+  const activeIndices = ALL_SLIDES.map((_, i) => i).filter((i) => status[i] === true);
+
   useEffect(() => {
+    if (activeIndices.length < 2) return;
     const timer = setInterval(() => {
-      setCurrent((c) => (c + 1) % SLIDES.length);
+      setCurrent((c) => {
+        const pos = activeIndices.indexOf(c);
+        return activeIndices[(pos + 1) % activeIndices.length];
+      });
     }, INTERVAL_MS);
     return () => clearInterval(timer);
-  }, []);
+  // Re-run whenever the list of loaded slides changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndices.join(",")]);
+
+  // Jump to first loaded slide once it comes in
+  useEffect(() => {
+    if (activeIndices.length > 0 && !activeIndices.includes(current)) {
+      setCurrent(activeIndices[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndices.join(",")]);
 
   return (
     <div className="slideshow">
-      {SLIDES.map((slide, i) => (
-        <div
-          key={slide.src}
-          className={`slide${i === current ? " slide-active" : ""}`}
-          aria-hidden={i !== current}
-        >
-          {loaded[i] && (
-            <img
-              src={slide.src}
-              alt={slide.label}
-              className="slide-img"
-            />
-          )}
-        </div>
+      {ALL_SLIDES.map((slide, i) => (
+        status[i] === true && (
+          <div
+            key={slide.src}
+            className={`slide${i === current ? " slide-active" : ""}`}
+            aria-hidden={i !== current}
+          >
+            <img src={slide.src} alt={slide.label} className="slide-img" />
+          </div>
+        )
       ))}
 
-      {/* Dark gradient overlay for text readability */}
+      {/* Dark gradient overlay */}
       <div className="slide-overlay" />
 
-      {/* Slide indicators */}
-      <div className="slide-dots">
-        {SLIDES.map((_, i) => (
-          <button
-            key={i}
-            className={`slide-dot${i === current ? " active" : ""}`}
-            onClick={() => setCurrent(i)}
-            aria-label={`View ${SLIDES[i].label}`}
-          />
-        ))}
-      </div>
+      {/* Dots — only for loaded slides */}
+      {activeIndices.length > 1 && (
+        <div className="slide-dots">
+          {activeIndices.map((idx, pos) => (
+            <button
+              key={idx}
+              className={`slide-dot${idx === current ? " active" : ""}`}
+              onClick={() => setCurrent(idx)}
+              aria-label={`View ${ALL_SLIDES[idx].label}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

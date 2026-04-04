@@ -8,11 +8,11 @@ const ALL_SLIDES = [
   { src: "/slides/slide-03.jpg", label: "Paris" },
   { src: "/slides/slide-04.jpg", label: "Mountain Forest" },
   { src: "/slides/slide-05.jpg", label: "Iceland Aurora" },
-  { src: "/slides/slide-06.jpg", label: "Destination 6" },
-  { src: "/slides/slide-07.jpg", label: "Destination 7" },
-  { src: "/slides/slide-08.jpg", label: "Destination 8" },
-  { src: "/slides/slide-09.jpg", label: "Destination 9" },
-  { src: "/slides/slide-10.jpg", label: "Destination 10" },
+  { src: "/slides/slide-06.jpg", label: "African Safari" },
+  { src: "/slides/slide-07.jpg", label: "New York" },
+  { src: "/slides/slide-08.jpg", label: "Bali Temple" },
+  { src: "/slides/slide-09.jpg", label: "Nusa Penida" },
+  { src: "/slides/slide-10.jpg", label: "Ibiza" },
 ];
 
 const INTERVAL_MS = 5000;

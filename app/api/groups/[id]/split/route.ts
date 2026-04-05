@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const groupId = params.id;
+
+    const group = await prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) {
+      return NextResponse.json({ error: "Group not found" }, { status: 404 });
+    }
+
+    const splits = await prisma.costSplit.findMany({
+      where: { groupId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        label: true,
+        totalAmount: true,
+        memberCount: true,
+        amountPerPerson: true,
+      },
+    });
+
+    return NextResponse.json(splits);
+  } catch (error) {
+    console.error("[GET /api/groups/[id]/split]", error);
+    return NextResponse.json({ error: "Failed to fetch cost splits" }, { status: 500 });
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }

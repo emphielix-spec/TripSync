@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import DestinationImage from "@/app/components/DestinationImage";
@@ -36,6 +36,22 @@ const YES_NO_QUESTIONS = [
 
 type YesNoKey = (typeof YES_NO_QUESTIONS)[number]["key"];
 
+const CURRENCIES = [
+  { code: "EUR", symbol: "€" },
+  { code: "GBP", symbol: "£" },
+  { code: "USD", symbol: "$" },
+  { code: "SEK", symbol: "kr" },
+  { code: "NOK", symbol: "kr" },
+  { code: "CHF", symbol: "Fr" },
+] as const;
+type CurrencyCode = (typeof CURRENCIES)[number]["code"];
+
+interface GroupMember {
+  id: string;
+  name: string;
+  hasPreferences: boolean;
+}
+
 interface Destination {
   id: string;
   name: string;
@@ -51,6 +67,7 @@ interface DestinationResult extends Destination {
 }
 
 interface SplitEntry {
+  id?: string;
   label: string;
   totalAmount: number;
   memberCount: number;
@@ -96,6 +113,13 @@ export default function GroupPage({ params }: { params: { id: string } }) {
 
   // Tab
   const [tab, setTab] = useState<Tab>("preferences");
+
+  // Currency
+  const [currency, setCurrency] = useState<CurrencyCode>("EUR");
+  const currencySymbol = CURRENCIES.find((c) => c.code === currency)!.symbol;
+
+  // ── Members ───────────────────────────────────────────────────
+  const [members, setMembers] = useState<GroupMember[]>([]);
 
   // ── Preferences ──────────────────────────────────────────────
   const [prefs, setPrefs] = useState({
@@ -144,11 +168,45 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     setMemberName(localStorage.getItem("ts_memberName"));
   }, []);
 
-  // Auto-load results + prefs summary when switching to results tab
+  // ─── Fetch members (used for readiness panel + polling) ───────
+  const fetchMembers = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/groups/${groupId}/members`);
+      if (res.ok) {
+        const data = await res.json();
+        setMembers(data);
+      }
+    } catch { /* silent */ }
+  }, [groupId]);
+
+  // Poll members every 10s while on preferences tab
+  useEffect(() => {
+    if (tab !== "preferences") return;
+    fetchMembers();
+    const id = setInterval(fetchMembers, 10_000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, groupId]);
+
+  // ─── Fetch split history when switching to split tab ──────────
+  const fetchSplitHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/groups/${groupId}/split`);
+      if (res.ok) {
+        const data = await res.json();
+        setSplitHistory(data);
+      }
+    } catch { /* silent */ }
+  }, [groupId]);
+
+  // Auto-load on tab switch
   useEffect(() => {
     if (tab === "results") {
       fetchResults();
       fetchPrefsSummary();
+    }
+    if (tab === "split") {
+      fetchSplitHistory();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
@@ -175,7 +233,6 @@ export default function GroupPage({ params }: { params: { id: string } }) {
             : new Date().toISOString(),
           tripDurationDays: Number(prefs.tripDurationDays),
           vibe: prefs.vibe,
-          // Convert null → false for unanswered questions
           wantsBeach:        yesNo.wantsBeach ?? false,
           wantsNightlife:    yesNo.wantsNightlife ?? false,
           okLongFlights:     yesNo.okLongFlights ?? false,
@@ -191,6 +248,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save preferences");
       setPrefsStatus("success");
+      fetchMembers(); // refresh the readiness panel immediately
     } catch (err: unknown) {
       setPrefsError(err instanceof Error ? err.message : "Something went wrong, try again");
       setPrefsStatus("error");
@@ -295,6 +353,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
   ];
 
   const allYesNoAnswered = YES_NO_QUESTIONS.every((q) => yesNo[q.key] !== null);
+  const membersReady = members.filter((m) => m.hasPreferences).length;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)" }}>
@@ -307,7 +366,20 @@ export default function GroupPage({ params }: { params: { id: string } }) {
           >
             <span className="nav-brand">TripSync</span>
           </button>
-          {memberName && <span className="nav-group">{memberName}</span>}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {/* Currency selector */}
+            <select
+              className="currency-select"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+              aria-label="Currency"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
+              ))}
+            </select>
+            {memberName && <span className="nav-group">{memberName}</span>}
+          </div>
         </div>
       </nav>
 
@@ -336,6 +408,26 @@ export default function GroupPage({ params }: { params: { id: string } }) {
               <div className="section-card">
                 <h2 className="section-title">Your travel preferences</h2>
 
+                {/* Member readiness panel */}
+                {members.length > 0 && (
+                  <div className="members-ready-panel">
+                    <div className="members-ready-label">
+                      {membersReady}/{members.length} members ready
+                    </div>
+                    <div className="members-ready-list">
+                      {members.map((m) => (
+                        <span
+                          key={m.id}
+                          className={`member-chip ${m.hasPreferences ? "member-chip--done" : "member-chip--waiting"}`}
+                          title={m.hasPreferences ? "Preferences submitted" : "Waiting…"}
+                        >
+                          {m.hasPreferences ? "✅" : "⏳"} {m.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {prefsStatus === "success" && (
                   <div className="notice notice-success">
                     Preferences saved! Head to the AI Match tab when everyone&apos;s ready.
@@ -352,7 +444,9 @@ export default function GroupPage({ params }: { params: { id: string } }) {
 
                 <form onSubmit={submitPreferences}>
                   <div className="field">
-                    <label className="field-label">Budget range (€)</label>
+                    <label className="field-label">
+                      Budget range ({currencySymbol})
+                    </label>
                     <div className="input-row">
                       <input className="input" type="number" placeholder="Min" min={0}
                         value={prefs.budgetMin}
@@ -551,7 +645,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                       <div key={p.memberName} className="prefs-summary-card">
                         <div className="prefs-summary-name">{p.memberName}</div>
                         <div className="prefs-summary-meta">
-                          <span>💰 €{p.budgetMin}–€{p.budgetMax}</span>
+                          <span>💰 {currencySymbol}{p.budgetMin}–{currencySymbol}{p.budgetMax}</span>
                           <span>📅 {new Date(p.departureDateFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – {new Date(p.departureDateTo).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
                           <span>🗓️ {p.tripDurationDays} days</span>
                           <span>✈️ {p.vibe.charAt(0) + p.vibe.slice(1).toLowerCase()}</span>
@@ -647,7 +741,9 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                   </div>
 
                   <div className="field">
-                    <label className="field-label" htmlFor="totalAmount">Total amount (€)</label>
+                    <label className="field-label" htmlFor="totalAmount">
+                      Total amount ({currencySymbol})
+                    </label>
                     <input id="totalAmount" className="input" type="number"
                       placeholder="e.g. 1200" min={0} step="0.01"
                       value={splitForm.totalAmount}
@@ -680,10 +776,10 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                           transition={{ duration: 0.3 }}
                         >
                           <div className="split-result-amount">
-                            €{splitHistory[0].amountPerPerson.toFixed(2)} per person
+                            {currencySymbol}{splitHistory[0].amountPerPerson.toFixed(2)} per person
                           </div>
                           <div className="split-result-label">
-                            {splitHistory[0].label} · €{splitHistory[0].totalAmount.toFixed(2)} ÷ {splitHistory[0].memberCount} people
+                            {splitHistory[0].label} · {currencySymbol}{splitHistory[0].totalAmount.toFixed(2)} ÷ {splitHistory[0].memberCount} people
                           </div>
                         </motion.div>
                       )}
@@ -692,15 +788,15 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                     {splitHistory.length > 1 && (
                       <ul className="split-history-list">
                         {splitHistory.slice(1).map((s, i) => (
-                          <li key={i} className="split-history-row">
+                          <li key={s.id ?? i} className="split-history-row">
                             <div>
                               <div className="split-row-label">{s.label}</div>
                               <div className="split-row-meta">
-                                €{s.totalAmount.toFixed(2)} ÷ {s.memberCount} people
+                                {currencySymbol}{s.totalAmount.toFixed(2)} ÷ {s.memberCount} people
                               </div>
                             </div>
                             <div className="split-row-per">
-                              €{s.amountPerPerson.toFixed(2)}/person
+                              {currencySymbol}{s.amountPerPerson.toFixed(2)}/person
                             </div>
                           </li>
                         ))}

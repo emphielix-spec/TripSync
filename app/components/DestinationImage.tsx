@@ -10,9 +10,9 @@ interface DestinationImageProps {
 export default function DestinationImage({ name, country }: DestinationImageProps) {
   const [failed, setFailed] = useState(false);
 
-  // loremflickr.com: keyword-based, free, no API key, actively maintained
-  const query = encodeURIComponent(`${name},${country},travel`);
-  const src = `https://loremflickr.com/800/400/${query}`;
+  // Unsplash Source: free, no API key, returns relevant travel photos
+  const query = encodeURIComponent(`${name} ${country} travel`);
+  const src = `https://source.unsplash.com/800x450/?${query}`;
 
   if (failed) {
     return (

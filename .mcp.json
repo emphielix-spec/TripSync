@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "builder-io": {
+      "command": "npx",
+      "args": ["@builder.io/mcp@latest", "--apiKey", "3ef7c68fbb254f7d812f18d62d2891ec"]
+    }
+  }
+}

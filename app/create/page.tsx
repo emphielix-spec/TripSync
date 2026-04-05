@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import confetti from "canvas-confetti";
+import DestinationSlideshow from "@/app/components/DestinationSlideshow";
 
 type Status = "idle" | "loading" | "done" | "error";
 
@@ -20,7 +22,8 @@ export default function CreatePage() {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
   const [created, setCreated] = useState<CreatedGroup | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,6 +61,11 @@ export default function CreatePage() {
 
       setCreated(group);
       setStatus("done");
+
+      // 🎉 Confetti!
+      confetti({ particleCount: 140, spread: 80, origin: { y: 0.55 } });
+      setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.4 }, angle: 60 }), 250);
+      setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.4 }, angle: 120 }), 400);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong, try again");
       setStatus("error");
@@ -68,20 +76,32 @@ export default function CreatePage() {
     if (!created) return;
     try {
       await navigator.clipboard.writeText(created.inviteCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch { /* silent fallback */ }
+  }
+
+  async function copyLink() {
+    if (!created) return;
+    try {
+      const url = `${window.location.origin}/join?code=${created.inviteCode}`;
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     } catch { /* silent fallback */ }
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page auth-page--slideshow">
+      <DestinationSlideshow />
+
       <motion.div
-        style={{ width: "100%", maxWidth: 480 }}
+        style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 480 }}
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        <button className="back-link" onClick={() => router.push("/")}>
+        <button className="back-link back-link--light" onClick={() => router.push("/")}>
           ← Back to home
         </button>
 
@@ -137,20 +157,32 @@ export default function CreatePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35 }}
             >
-              <h1 className="auth-card-title">Group created! 🎉</h1>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1.25rem" }}>
-                Share this code with your friends so they can join.
+              <h1 className="auth-card-title" style={{ textAlign: "center" }}>
+                Group created! 🎉
+              </h1>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "1.5rem", textAlign: "center" }}>
+                Share the code or link below so your friends can join.
               </p>
 
-              <div className="invite-box">
-                <span className="invite-code-text">{created!.inviteCode}</span>
-                <button className="btn btn-outline btn-sm" onClick={copyCode}>
-                  {copied ? "✓ Copied!" : "Copy code"}
+              {/* Big invite code */}
+              <div className="invite-code-display">{created!.inviteCode}</div>
+
+              {/* Copy buttons */}
+              <div className="invite-actions">
+                <button className="btn btn-outline" onClick={copyCode}>
+                  {copiedCode ? "✓ Copied!" : "Copy code"}
+                </button>
+                <button className="btn btn-primary" onClick={copyLink}>
+                  {copiedLink ? "✓ Link copied!" : "🔗 Copy invite link"}
                 </button>
               </div>
 
+              <p style={{ fontSize: "0.775rem", color: "var(--text-muted)", textAlign: "center", marginBottom: "1.5rem" }}>
+                Link takes friends straight to the join form — no need to type the code.
+              </p>
+
               <button
-                className="btn btn-primary btn-full"
+                className="btn btn-ghost btn-full"
                 onClick={() => router.push(`/group/${created!.id}`)}
               >
                 Go to my group →

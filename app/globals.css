@@ -363,6 +363,14 @@ a:hover { text-decoration: underline; }
   padding: 2rem 1.5rem;
 }
 
+/* Slideshow variant — replaces aurora gradient with cinematic photos */
+.auth-page--slideshow {
+  position: relative;
+  overflow: hidden;
+  background: #06182c;
+  animation: none;
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -1082,6 +1090,98 @@ select.input { cursor: pointer; }
 
 .prefs-yn-label {
   color: var(--text-muted);
+}
+
+/* ─── Back-link on dark/photo backgrounds ───────────────────── */
+.back-link--light {
+  color: rgba(255, 255, 255, 0.9);
+}
+.back-link--light:hover {
+  color: white;
+  opacity: 1;
+}
+
+/* ─── Invite code success screen ────────────────────────────── */
+.invite-code-display {
+  font-family: var(--font-heading), monospace;
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--coral);
+  text-align: center;
+  padding: 1rem 0 1.25rem;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+/* ─── Member readiness panel (Preferences tab) ───────────────── */
+.members-ready-panel {
+  background: var(--cream-dark);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.members-ready-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.members-ready-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.member-chip--done {
+  background: #D1FAE5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.member-chip--waiting {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+
+/* ─── Currency selector ──────────────────────────────────────── */
+.currency-select {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-family: var(--font-body), system-ui, sans-serif;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.currency-select:focus {
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
 }
 
 /* ─── Responsive ─────────────────────────────────────────────── */

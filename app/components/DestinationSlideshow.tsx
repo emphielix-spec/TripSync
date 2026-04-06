@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from "react";
 
+// Six motion variants — each slide gets a different one for cinematic variety
+const KB_ANIMS = [
+  "kb-zoom-in",
+  "kb-pan-right",
+  "kb-zoom-out",
+  "kb-diagonal-up",
+  "kb-pan-left",
+  "kb-diagonal-down",
+] as const;
+
 const ALL_SLIDES = [
   { src: "/slides/slide-01.jpg", label: "Tropical Beach" },
   { src: "/slides/slide-02.jpg", label: "Barcelona" },
@@ -64,7 +74,12 @@ export default function DestinationSlideshow() {
             className={`slide${i === current ? " slide-active" : ""}`}
             aria-hidden={i !== current}
           >
-            <img src={slide.src} alt={slide.label} className="slide-img" />
+            <img
+              src={slide.src}
+              alt={slide.label}
+              className="slide-img"
+              style={{ animationName: KB_ANIMS[i % KB_ANIMS.length] }}
+            />
           </div>
         )
       ))}

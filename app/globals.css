@@ -109,9 +109,30 @@ a:hover { text-decoration: underline; }
   z-index: 0;
 }
 
-@keyframes kenburns {
-  0%   { transform: scale(1)    translate(0, 0); }
-  100% { transform: scale(1.10) translate(-2%, -1%); }
+/* Six Ken Burns variants — each slide gets a different one for cinematic variety */
+@keyframes kb-zoom-in {
+  from { transform: scale(1.00) translate(0%,    0%);    }
+  to   { transform: scale(1.13) translate(-1.5%, -0.5%); }
+}
+@keyframes kb-zoom-out {
+  from { transform: scale(1.13) translate(1.5%,  0.5%);  }
+  to   { transform: scale(1.00) translate(-0.5%, -1%);   }
+}
+@keyframes kb-pan-right {
+  from { transform: scale(1.08) translate(-3%,   0.5%);  }
+  to   { transform: scale(1.08) translate(1.5%,  -0.5%); }
+}
+@keyframes kb-pan-left {
+  from { transform: scale(1.08) translate(2.5%,  -0.5%); }
+  to   { transform: scale(1.08) translate(-2.5%, 0.5%);  }
+}
+@keyframes kb-diagonal-up {
+  from { transform: scale(1.00) translate(2%,    2%);    }
+  to   { transform: scale(1.10) translate(-1%,   -1%);   }
+}
+@keyframes kb-diagonal-down {
+  from { transform: scale(1.10) translate(-2%,   -1.5%); }
+  to   { transform: scale(1.00) translate(1%,    1%);    }
 }
 
 .slide {
@@ -130,12 +151,17 @@ a:hover { text-decoration: underline; }
   height: 100%;
   object-fit: cover;
   object-position: center;
-  animation: kenburns 6s ease-out forwards;
+  /* animation-name is set inline per slide for variety; duration/easing/fill here */
+  animation-duration: 7s;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
 }
 
-/* Reset Ken Burns on each new active slide */
+/* Ensure animation properties apply on active slide too */
 .slide-active .slide-img {
-  animation: kenburns 6s ease-out forwards;
+  animation-duration: 7s;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
 }
 
 /* Layered overlay: dark vignette + left-side fade for content readability */

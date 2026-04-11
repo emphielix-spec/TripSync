@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
+import { QRCodeSVG } from "qrcode.react";
 import DestinationSlideshow from "@/app/components/DestinationSlideshow";
 
 type Status = "idle" | "loading" | "done" | "error";
@@ -58,6 +59,7 @@ export default function CreatePage() {
       localStorage.setItem("ts_groupId", group.id);
       localStorage.setItem("ts_memberId", memberId);
       localStorage.setItem("ts_memberName", memberName.trim());
+      localStorage.setItem("ts_groupName", group.name);
 
       setCreated(group);
       setStatus("done");
@@ -180,6 +182,20 @@ export default function CreatePage() {
               <p style={{ fontSize: "0.775rem", color: "var(--text-muted)", textAlign: "center", marginBottom: "1.5rem" }}>
                 Link takes friends straight to the join form — no need to type the code.
               </p>
+
+              {/* QR code */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "1.5rem" }}>
+                <QRCodeSVG
+                  value={`${typeof window !== "undefined" ? window.location.origin : ""}/join?code=${created!.inviteCode}`}
+                  size={120}
+                  fgColor="var(--sky)"
+                  bgColor="transparent"
+                  style={{ borderRadius: 8 }}
+                />
+                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                  Friends can scan to join
+                </p>
+              </div>
 
               <button
                 className="btn btn-ghost btn-full"

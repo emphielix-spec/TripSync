@@ -44,6 +44,7 @@ function JoinForm() {
       localStorage.setItem("ts_groupId", data.groupId);
       localStorage.setItem("ts_memberId", data.memberId);
       localStorage.setItem("ts_memberName", memberName.trim());
+      if (data.groupName) localStorage.setItem("ts_groupName", data.groupName);
 
       router.push(`/group/${data.groupId}`);
     } catch (err: unknown) {

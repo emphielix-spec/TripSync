@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
+import ReactMarkdown from "react-markdown";
 import DestinationImage from "@/app/components/DestinationImage";
 
-// ─── Types ────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────
 type Tab = "preferences" | "match" | "results" | "split";
 type AsyncStatus = "idle" | "loading" | "success" | "error";
 
@@ -102,6 +104,20 @@ const cardVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
 };
 
+// Returns the index of the destination with the highest net votes (upvotes - downvotes)
+// Falls back to index 0 if no votes yet
+function getBestDestIdx(dests: { id: string }[], voted: Record<string, "UP" | "DOWN">): number {
+  if (dests.length === 0) return 0;
+  let best = 0;
+  let bestNet = -Infinity;
+  for (let i = 0; i < dests.length; i++) {
+    const v = voted[dests[i].id];
+    const net = v === "UP" ? 1 : v === "DOWN" ? -1 : 0;
+    if (net > bestNet) { bestNet = net; best = i; }
+  }
+  return best;
+}
+
 // ─── Component ────────────────────────────────────────────────
 export default function GroupPage({ params }: { params: { id: string } }) {
   const groupId = params.id;
@@ -110,9 +126,13 @@ export default function GroupPage({ params }: { params: { id: string } }) {
   // Identity
   const [memberId, setMemberId] = useState<string | null>(null);
   const [memberName, setMemberName] = useState<string | null>(null);
+  const [groupName, setGroupName] = useState<string | null>(null);
 
   // Tab
   const [tab, setTab] = useState<Tab>("preferences");
+
+  // Dark mode
+  const [darkMode, setDarkMode] = useState(false);
 
   // Currency
   const [currency, setCurrency] = useState<CurrencyCode>("EUR");
@@ -120,6 +140,10 @@ export default function GroupPage({ params }: { params: { id: string } }) {
 
   // ── Members ───────────────────────────────────────────────────
   const [members, setMembers] = useState<GroupMember[]>([]);
+
+  // ── All-ready banner ──────────────────────────────────────────
+  const [allReady, setAllReady] = useState(false);
+  const allReadyFired = useRef(false);
 
   // ── Preferences ──────────────────────────────────────────────
   const [prefs, setPrefs] = useState({
@@ -141,6 +165,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
   });
   const [prefsStatus, setPrefsStatus] = useState<AsyncStatus>("idle");
   const [prefsError, setPrefsError] = useState("");
+  const [hasExistingPrefs, setHasExistingPrefs] = useState(false);
 
   // ── AI Match ─────────────────────────────────────────────────
   const [destinations, setDestinations] = useState<Destination[]>([]);
@@ -148,6 +173,21 @@ export default function GroupPage({ params }: { params: { id: string } }) {
   const [matchError, setMatchError] = useState("");
   const [voteStatus, setVoteStatus] = useState<Record<string, AsyncStatus>>({});
   const [votedFor, setVotedFor] = useState<Record<string, "UP" | "DOWN">>({});
+  const unanimousFired = useRef(false);
+
+  // ── Trip Plan ─────────────────────────────────────────────────
+  const [planDestIdx, setPlanDestIdx] = useState<number>(0);
+  const [planContent, setPlanContent] = useState<string | null>(null);
+  const [planStatus, setPlanStatus] = useState<AsyncStatus>("idle");
+  const [planError, setPlanError] = useState("");
+  const [planLoadingMsg, setPlanLoadingMsg] = useState("Searching for flights…");
+  const planLoadingMsgs = [
+    "Searching for flights…",
+    "Finding hotels…",
+    "Building your itinerary…",
+    "Checking activities…",
+    "Almost ready…",
+  ];
 
   // ── Results ───────────────────────────────────────────────────
   const [results, setResults] = useState<DestinationResult[]>([]);
@@ -162,11 +202,86 @@ export default function GroupPage({ params }: { params: { id: string } }) {
   const [splitStatus, setSplitStatus] = useState<AsyncStatus>("idle");
   const [splitError, setSplitError] = useState("");
 
-  // ─── Bootstrap ───────────────────────────────────────────────
+  // ─── Bootstrap — read localStorage + ?m= URL param ───────────
   useEffect(() => {
-    setMemberId(localStorage.getItem("ts_memberId"));
+    const params = new URLSearchParams(window.location.search);
+    const mParam = params.get("m");
+
+    if (mParam) {
+      localStorage.setItem("ts_memberId", mParam);
+      setMemberId(mParam);
+    } else {
+      setMemberId(localStorage.getItem("ts_memberId"));
+    }
     setMemberName(localStorage.getItem("ts_memberName"));
+    setGroupName(localStorage.getItem("ts_groupName"));
+
+    // Restore dark mode preference
+    const savedTheme = localStorage.getItem("ts_theme");
+    if (savedTheme === "dark") {
+      setDarkMode(true);
+      document.documentElement.dataset.theme = "dark";
+    }
   }, []);
+
+  // ─── Toggle dark mode ─────────────────────────────────────────
+  function toggleDarkMode() {
+    const next = !darkMode;
+    setDarkMode(next);
+    if (next) {
+      document.documentElement.dataset.theme = "dark";
+      localStorage.setItem("ts_theme", "dark");
+    } else {
+      delete document.documentElement.dataset.theme;
+      localStorage.setItem("ts_theme", "light");
+    }
+  }
+
+  // ─── Load existing preferences once memberId is set ───────────
+  useEffect(() => {
+    if (!memberId) return;
+    async function loadMyPrefs() {
+      try {
+        const res = await fetch(`/api/groups/${groupId}/preferences?memberId=${memberId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data) return;
+
+        setHasExistingPrefs(true);
+
+        // Pre-fill form fields
+        const toDateInput = (iso: string) => {
+          const d = new Date(iso);
+          return d.toISOString().split("T")[0];
+        };
+
+        setPrefs({
+          budgetMin: String(data.budgetMin),
+          budgetMax: String(data.budgetMax),
+          tripDurationDays: String(data.tripDurationDays),
+          vibe: data.vibe as Vibe,
+          departureDateFrom: toDateInput(data.departureDateFrom),
+          departureDateTo: toDateInput(data.departureDateTo),
+        });
+
+        const yn: Record<YesNoKey, boolean | null> = {
+          wantsBeach:        data.wantsBeach,
+          wantsNightlife:    data.wantsNightlife,
+          okLongFlights:     data.okLongFlights,
+          wantsOutdoor:      data.wantsOutdoor,
+          prefersCity:       data.prefersCity,
+          budgetPriority:    data.budgetPriority,
+          wantsRoadTrip:     data.wantsRoadTrip,
+          wantsWarmWeather:  data.wantsWarmWeather,
+          openToOffbeat:     data.openToOffbeat,
+          wantsAllInclusive: data.wantsAllInclusive,
+        };
+        setYesNo(yn);
+      } catch { /* silent */ }
+    }
+    loadMyPrefs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberId]);
 
   // ─── Fetch members (used for readiness panel + polling) ───────
   const fetchMembers = useCallback(async () => {
@@ -187,6 +302,35 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, groupId]);
+
+  // ─── "Everyone's ready!" banner detection ─────────────────────
+  const membersReady = members.filter((m) => m.hasPreferences).length;
+
+  useEffect(() => {
+    if (
+      members.length > 0 &&
+      membersReady === members.length &&
+      !allReadyFired.current
+    ) {
+      allReadyFired.current = true;
+      setAllReady(true);
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
+      setTimeout(() => confetti({ particleCount: 60, spread: 100, angle: 60, origin: { y: 0.45 } }), 300);
+      setTimeout(() => confetti({ particleCount: 60, spread: 100, angle: 120, origin: { y: 0.45 } }), 500);
+    }
+  }, [members, membersReady]);
+
+  // ─── Unanimous upvote confetti ───────────────────────────────
+  useEffect(() => {
+    if (
+      destinations.length > 0 &&
+      destinations.every((d) => votedFor[d.id] === "UP") &&
+      !unanimousFired.current
+    ) {
+      unanimousFired.current = true;
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.55 } });
+    }
+  }, [votedFor, destinations]);
 
   // ─── Fetch split history when switching to split tab ──────────
   const fetchSplitHistory = useCallback(async () => {
@@ -248,6 +392,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save preferences");
       setPrefsStatus("success");
+      setHasExistingPrefs(true);
       fetchMembers(); // refresh the readiness panel immediately
     } catch (err: unknown) {
       setPrefsError(err instanceof Error ? err.message : "Something went wrong, try again");
@@ -260,6 +405,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     setMatchStatus("loading");
     setMatchError("");
     setDestinations([]);
+    unanimousFired.current = false;
     try {
       const res = await fetch(`/api/groups/${groupId}/match`, { method: "POST" });
       const data = await res.json();
@@ -287,6 +433,54 @@ export default function GroupPage({ params }: { params: { id: string } }) {
       setVotedFor((p) => ({ ...p, [destinationId]: value }));
     } catch {
       setVoteStatus((p) => ({ ...p, [destinationId]: "error" }));
+    }
+  }
+
+  // ─── Trip Plan ────────────────────────────────────────────────
+  // When destinations load, try to restore the last saved plan
+  useEffect(() => {
+    if (destinations.length === 0) return;
+    const best = getBestDestIdx(destinations, votedFor);
+    setPlanDestIdx(best);
+    // Try to load a saved plan for the top destination
+    const d = destinations[best];
+    fetch(`/api/groups/${groupId}/plan?destination=${encodeURIComponent(d.name + ", " + d.country)}`)
+      .then((r) => r.json())
+      .then((data) => { if (data?.content) setPlanContent(data.content); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destinations.map((d) => d.id).join(",")]);
+
+  async function generatePlan() {
+    const d = destinations[planDestIdx];
+    if (!d) return;
+    setPlanStatus("loading");
+    setPlanError("");
+    setPlanContent(null);
+    setPlanLoadingMsg(planLoadingMsgs[0]);
+
+    // Cycle loading messages every 3 seconds
+    let msgIdx = 0;
+    const msgTimer = setInterval(() => {
+      msgIdx = (msgIdx + 1) % planLoadingMsgs.length;
+      setPlanLoadingMsg(planLoadingMsgs[msgIdx]);
+    }, 3000);
+
+    try {
+      const res = await fetch(`/api/groups/${groupId}/plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destinationName: d.name, destinationCountry: d.country }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate plan");
+      setPlanContent(data.content);
+      setPlanStatus("success");
+    } catch (err: unknown) {
+      setPlanError(err instanceof Error ? err.message : "Something went wrong, try again");
+      setPlanStatus("error");
+    } finally {
+      clearInterval(msgTimer);
     }
   }
 
@@ -345,15 +539,39 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const TABS: { key: Tab; label: string }[] = [
-    { key: "preferences", label: "Preferences" },
-    { key: "match",       label: "AI Match" },
-    { key: "results",     label: "Results" },
-    { key: "split",       label: "Cost Split" },
+  // ─── Trip countdown ───────────────────────────────────────────
+  const earliestDeparture =
+    prefsSummary.length > 0
+      ? prefsSummary.reduce<Date | null>((earliest, p) => {
+          const d = new Date(p.departureDateFrom);
+          return earliest === null || d < earliest ? d : earliest;
+        }, null)
+      : null;
+
+  const daysUntilTrip =
+    earliestDeparture !== null
+      ? Math.ceil((earliestDeparture.getTime() - Date.now()) / 86_400_000)
+      : null;
+
+  // ─── Tab definitions ─────────────────────────────────────────
+  const allReady_forBadge = members.length > 0 && membersReady === members.length;
+
+  const TABS: { key: Tab; label: string; badge?: string; dotBadge?: boolean }[] = [
+    {
+      key: "preferences",
+      label: "Preferences",
+      badge: members.length > 0 ? `${membersReady}/${members.length}` : undefined,
+    },
+    {
+      key: "match",
+      label: "AI Match",
+      dotBadge: allReady_forBadge,
+    },
+    { key: "results", label: "Results" },
+    { key: "split", label: "Cost Split" },
   ];
 
   const allYesNoAnswered = YES_NO_QUESTIONS.every((q) => yesNo[q.key] !== null);
-  const membersReady = members.filter((m) => m.hasPreferences).length;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--cream)" }}>
@@ -366,7 +584,13 @@ export default function GroupPage({ params }: { params: { id: string } }) {
           >
             <span className="nav-brand">TripSync</span>
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+            {/* Group name */}
+            {groupName && (
+              <span className="nav-group-name" title={groupName}>
+                {groupName}
+              </span>
+            )}
             {/* Currency selector */}
             <select
               className="currency-select"
@@ -378,6 +602,15 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                 <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
               ))}
             </select>
+            {/* Dark mode toggle */}
+            <button
+              className="dark-toggle"
+              onClick={toggleDarkMode}
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              title={darkMode ? "Light mode" : "Dark mode"}
+            >
+              {darkMode ? "☀️" : "🌙"}
+            </button>
             {memberName && <span className="nav-group">{memberName}</span>}
           </div>
         </div>
@@ -386,13 +619,15 @@ export default function GroupPage({ params }: { params: { id: string } }) {
       {/* ── Tab bar ─────────────────────────────────────────── */}
       <div className="tab-bar">
         <div className="tab-bar-inner">
-          {TABS.map(({ key, label }) => (
+          {TABS.map(({ key, label, badge, dotBadge }) => (
             <button
               key={key}
               className={`tab-btn${tab === key ? " active" : ""}`}
               onClick={() => setTab(key)}
             >
               {label}
+              {badge && <span className="tab-badge">{badge}</span>}
+              {dotBadge && <span className="tab-badge tab-badge--dot" />}
             </button>
           ))}
         </div>
@@ -406,7 +641,25 @@ export default function GroupPage({ params }: { params: { id: string } }) {
           {tab === "preferences" && (
             <motion.div key="preferences" variants={tabVariants} initial="initial" animate="animate" exit="exit">
               <div className="section-card">
-                <h2 className="section-title">Your travel preferences</h2>
+                <h2 className="section-title">
+                  {hasExistingPrefs ? "Update your preferences" : "Your travel preferences"}
+                </h2>
+
+                {/* Everyone's ready banner */}
+                {allReady && (
+                  <motion.div
+                    className="all-ready-banner"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.35 }}
+                  >
+                    <span className="all-ready-banner-icon">🎉</span>
+                    <div className="all-ready-banner-text">
+                      <strong>Everyone&apos;s ready!</strong>
+                      <span>Head to the AI Match tab to find your perfect destination.</span>
+                    </div>
+                  </motion.div>
+                )}
 
                 {/* Member readiness panel */}
                 {members.length > 0 && (
@@ -428,9 +681,16 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                   </div>
                 )}
 
+                {/* Edit notice */}
+                {hasExistingPrefs && prefsStatus !== "success" && (
+                  <div className="edit-prefs-notice">
+                    ✏️ You&apos;ve already submitted — edit below and save to update your preferences.
+                  </div>
+                )}
+
                 {prefsStatus === "success" && (
                   <div className="notice notice-success">
-                    Preferences saved! Head to the AI Match tab when everyone&apos;s ready.
+                    Preferences saved! {allReady ? "Everyone's ready — go to AI Match!" : "Head to the AI Match tab when everyone's ready."}
                   </div>
                 )}
                 {prefsStatus === "error" && (
@@ -524,7 +784,11 @@ export default function GroupPage({ params }: { params: { id: string } }) {
 
                   <button type="submit" className="btn btn-primary btn-full"
                     disabled={prefsStatus === "loading" || !memberId || !prefs.vibe || !allYesNoAnswered}>
-                    {prefsStatus === "loading" ? "Saving…" : "Save my preferences"}
+                    {prefsStatus === "loading"
+                      ? "Saving…"
+                      : hasExistingPrefs
+                      ? "Update my preferences"
+                      : "Save my preferences"}
                   </button>
                 </form>
               </div>
@@ -559,18 +823,27 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                   <div className="match-trigger">
                     <button className="btn btn-primary" style={{ padding: "14px 28px" }}
                       onClick={triggerMatch}>
-                      ✨ Find destinations for our group
+                      ✨ {destinations.length > 0 ? "Re-run AI match" : "Find destinations for our group"}
                     </button>
                   </div>
                 )}
-
-                {matchStatus === "loading" && (
-                  <div className="spinner-wrap">
-                    <div className="spinner" />
-                    <p className="spinner-text">Finding the best destinations for your group…</p>
-                  </div>
-                )}
               </div>
+
+              {/* Skeleton cards while loading */}
+              {matchStatus === "loading" && (
+                <div className="dest-list" style={{ marginTop: "1rem" }}>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="dest-card" style={{ overflow: "hidden" }}>
+                      <div className="skeleton skeleton-img" />
+                      <div className="dest-card-body">
+                        <div className="skeleton skeleton-text skeleton-text--lg" style={{ marginBottom: "0.5rem" }} />
+                        <div className="skeleton skeleton-text" style={{ marginBottom: "0.5rem" }} />
+                        <div className="skeleton skeleton-text skeleton-text--sm" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {destinations.length > 0 && (
                 <motion.div
@@ -607,8 +880,16 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                           >
                             👎 Downvote
                           </button>
+                          <a
+                            href={`https://www.google.com/flights?q=flights+to+${encodeURIComponent(d.name + " " + d.country)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="book-link"
+                          >
+                            ✈️ Flights
+                          </a>
                           {voteStatus[d.id] === "success" && (
-                            <span className="vote-feedback">✓ Vote recorded</span>
+                            <span className="vote-feedback">✓ Voted</span>
                           )}
                           {voteStatus[d.id] === "error" && (
                             <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Vote failed</span>
@@ -619,12 +900,151 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                   ))}
                 </motion.div>
               )}
+
+              {/* ── Stage 2 — Trip Planner ──────────────────────── */}
+              {destinations.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                  style={{ marginTop: "2.5rem" }}
+                >
+                  {/* Divider */}
+                  <div className="plan-divider">
+                    <span className="plan-divider-label">Step 2 — Plan your trip</span>
+                  </div>
+
+                  <div className="section-card" style={{ marginTop: "1.25rem" }}>
+                    <h2 className="section-title">Plan your trip ✨</h2>
+
+                    {/* Destination selector */}
+                    <div className="field" style={{ marginBottom: "1.25rem" }}>
+                      <label className="field-label">Destination</label>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                        <select
+                          className="input"
+                          style={{ flex: 1, minWidth: 200 }}
+                          value={planDestIdx}
+                          onChange={(e) => {
+                            const idx = Number(e.target.value);
+                            setPlanDestIdx(idx);
+                            setPlanContent(null);
+                            setPlanStatus("idle");
+                          }}
+                        >
+                          {destinations.map((d, i) => {
+                            const v = votedFor[d.id];
+                            const net = v === "UP" ? 1 : v === "DOWN" ? -1 : 0;
+                            const label = i === getBestDestIdx(destinations, votedFor)
+                              ? `⭐ ${d.name}, ${d.country} (top pick)`
+                              : `${d.name}, ${d.country}${net > 0 ? " 👍" : net < 0 ? " 👎" : ""}`;
+                            return <option key={d.id} value={i}>{label}</option>;
+                          })}
+                        </select>
+                      </div>
+                      <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
+                        ⭐ Auto-selected the top-voted destination — change it if you want to plan a different one.
+                      </p>
+                    </div>
+
+                    {planError && <div className="notice notice-error">{planError}</div>}
+
+                    <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                      <button
+                        className="btn btn-primary"
+                        style={{ padding: "13px 26px", fontSize: "1rem" }}
+                        onClick={generatePlan}
+                        disabled={planStatus === "loading"}
+                      >
+                        {planStatus === "loading"
+                          ? "Generating…"
+                          : planContent
+                          ? "🔄 Regenerate plan"
+                          : "🗺️ Generate full trip plan"}
+                      </button>
+                      {planContent && (
+                        <button
+                          className="btn btn-ghost"
+                          onClick={() => window.print()}
+                        >
+                          🖨️ Print / Save PDF
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Loading state */}
+                    {planStatus === "loading" && (
+                      <div className="plan-loading">
+                        <div className="spinner" />
+                        <p className="plan-loading-msg">{planLoadingMsg}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Plan output */}
+                  {planContent && planStatus !== "loading" && (
+                    <motion.div
+                      className="plan-output"
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <ReactMarkdown
+                        components={{
+                          h2: ({ children }) => (
+                            <div className="plan-section-card">
+                              <h2 className="plan-section-title">{children}</h2>
+                            </div>
+                          ),
+                          h3: ({ children }) => <h3 className="plan-h3">{children}</h3>,
+                          p: ({ children }) => <p className="plan-p">{children}</p>,
+                          ul: ({ children }) => <ul className="plan-ul">{children}</ul>,
+                          ol: ({ children }) => <ol className="plan-ol">{children}</ol>,
+                          li: ({ children }) => <li className="plan-li">{children}</li>,
+                          a: ({ href, children }) => (
+                            <a href={href} target="_blank" rel="noopener noreferrer" className="plan-link">
+                              {children}
+                            </a>
+                          ),
+                          strong: ({ children }) => <strong className="plan-strong">{children}</strong>,
+                          hr: () => <hr className="plan-hr" />,
+                          table: ({ children }) => (
+                            <div className="plan-table-wrap">
+                              <table className="plan-table">{children}</table>
+                            </div>
+                          ),
+                          th: ({ children }) => <th className="plan-th">{children}</th>,
+                          td: ({ children }) => <td className="plan-td">{children}</td>,
+                          blockquote: ({ children }) => <blockquote className="plan-blockquote">{children}</blockquote>,
+                          code: ({ children }) => <code className="plan-code">{children}</code>,
+                        }}
+                      >
+                        {planContent}
+                      </ReactMarkdown>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
             </motion.div>
           )}
 
           {/* ── Results ─────────────────────────────────────── */}
           {tab === "results" && (
             <motion.div key="results" variants={tabVariants} initial="initial" animate="animate" exit="exit">
+
+              {/* Trip countdown */}
+              {daysUntilTrip !== null && daysUntilTrip > 0 && (
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
+                  <div className="trip-countdown">
+                    🗓️ {daysUntilTrip} day{daysUntilTrip !== 1 ? "s" : ""} until the earliest departure
+                  </div>
+                </div>
+              )}
+              {daysUntilTrip !== null && daysUntilTrip <= 0 && (
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
+                  <div className="trip-countdown">🛫 Trip time!</div>
+                </div>
+              )}
 
               {/* Group preferences summary */}
               <div className="section-card" style={{ marginBottom: "1rem" }}>
@@ -708,12 +1128,22 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                           <span className="score-badge">{d.score.toFixed(1)} / 10</span>
                         </div>
                         <p className="dest-reasoning">{d.reasoning}</p>
-                        <div className="vote-tally">
-                          <span className="tally-up">👍 {d.upvotes}</span>
-                          <span className="tally-down">👎 {d.downvotes}</span>
-                          <span className="tally-net">
-                            net {d.upvotes - d.downvotes > 0 ? "+" : ""}{d.upvotes - d.downvotes}
-                          </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                          <div className="vote-tally">
+                            <span className="tally-up">👍 {d.upvotes}</span>
+                            <span className="tally-down">👎 {d.downvotes}</span>
+                            <span className="tally-net">
+                              net {d.upvotes - d.downvotes > 0 ? "+" : ""}{d.upvotes - d.downvotes}
+                            </span>
+                          </div>
+                          <a
+                            href={`https://www.google.com/flights?q=flights+to+${encodeURIComponent(d.name + " " + d.country)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="book-link"
+                          >
+                            ✈️ Find flights
+                          </a>
                         </div>
                       </div>
                     </motion.div>

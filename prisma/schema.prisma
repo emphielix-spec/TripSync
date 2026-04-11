@@ -20,6 +20,7 @@ model Group {
   preferences  Preference[]
   destinations Destination[]
   costSplits   CostSplit[]
+  tripPlans    TripPlan[]
 }
 
 model Member {
@@ -91,3 +92,13 @@ model CostSplit {
   amountPerPerson Float
   createdAt       DateTime @default(now())
 }
+
+model TripPlan {
+  id          String   @id @default(cuid())
+  groupId     String
+  group       Group    @relation(fields: [groupId], references: [id])
+  destination String
+  content     String
+  createdAt   DateTime @default(now())
+}
+

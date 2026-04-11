@@ -27,6 +27,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${poppins.variable} ${dmSans.variable}`}>
+      {/* Inline script prevents dark-mode flash before React hydrates */}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('ts_theme');if(t==='dark')document.documentElement.dataset.theme='dark';}catch(e){}` }} />
+      </head>
       <body>{children}</body>
     </html>
   );

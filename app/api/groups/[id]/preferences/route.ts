@@ -3,6 +3,29 @@ import { prisma } from "@/lib/prisma";
 
 const VALID_VIBES = ["BEACH", "CITY", "NATURE", "PARTY", "CULTURE", "ADVENTURE"];
 
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const groupId = params.id;
+    const memberId = req.nextUrl.searchParams.get("memberId");
+    if (!memberId) {
+      return NextResponse.json({ error: "memberId is required" }, { status: 400 });
+    }
+
+    const preference = await prisma.preference.findFirst({
+      where: { memberId, groupId },
+    });
+
+    // Return null if not found — the client checks for this
+    return NextResponse.json(preference ?? null);
+  } catch (error) {
+    console.error("[GET /api/groups/[id]/preferences]", error);
+    return NextResponse.json({ error: "Failed to fetch preferences" }, { status: 500 });
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }

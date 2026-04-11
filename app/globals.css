@@ -1210,6 +1210,519 @@ select.input { cursor: pointer; }
   box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
 }
 
+/* ─── Dark mode ─────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --coral:         #38BDF8;
+  --coral-hover:   #7DD3FC;
+  --coral-light:   rgba(56, 189, 248, 0.12);
+  --coral-glow:    0 0 0 3px rgba(56, 189, 248, 0.22);
+
+  --accent:        #FB923C;
+  --accent-hover:  #F97316;
+
+  --cream:         #0F172A;
+  --cream-dark:    #1E293B;
+
+  --white:         #1E293B;
+  --surface-2:     #162033;
+
+  --text:          #E2E8F0;
+  --text-muted:    #94A3B8;
+  --text-light:    #64748B;
+
+  --border:        #334155;
+  --border-light:  #1E293B;
+
+  --shadow-sm:     0 1px 4px rgba(0,0,0,0.3);
+  --shadow:        0 4px 16px rgba(0,0,0,0.4);
+  --shadow-md:     0 8px 32px rgba(0,0,0,0.5);
+  --shadow-glow:   0 4px 24px rgba(56, 189, 248, 0.25);
+
+  --gradient-primary: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+  --gradient-aurora:  linear-gradient(-45deg, #0f172a, #1e293b, #0f172a, #162032);
+}
+
+[data-theme="dark"] body {
+  background: var(--cream);
+  color: var(--text);
+}
+
+[data-theme="dark"] .navbar,
+[data-theme="dark"] .tab-bar {
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .section-card,
+[data-theme="dark"] .dest-card,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .start-card {
+  background: var(--white);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .input {
+  background: var(--cream-dark);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme="dark"] .btn-ghost {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .btn-ghost:hover:not(:disabled) {
+  background: var(--cream-dark);
+  color: var(--text);
+}
+
+[data-theme="dark"] .btn-outline {
+  background: transparent;
+  color: var(--coral);
+  border-color: var(--coral);
+}
+
+[data-theme="dark"] .vibe-pill {
+  background: var(--cream-dark);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .yn-pill {
+  background: var(--cream-dark);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .member-chip--done {
+  background: #064E3B;
+  color: #6EE7B7;
+  border-color: #065F46;
+}
+
+[data-theme="dark"] .member-chip--waiting {
+  background: #451A03;
+  color: #FCD34D;
+  border-color: #78350F;
+}
+
+[data-theme="dark"] .prefs-summary-card {
+  background: var(--cream-dark);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .prefs-summary-meta span {
+  background: var(--cream);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .currency-select {
+  background: var(--cream-dark);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .notice-success {
+  background: #052e16;
+  color: #4ade80;
+  border-color: #166534;
+}
+
+[data-theme="dark"] .notice-error {
+  background: #2d1515;
+  color: #f87171;
+  border-color: #7f1d1d;
+}
+
+/* Dark mode toggle button */
+.dark-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  flex-shrink: 0;
+}
+.dark-toggle:hover {
+  background: var(--cream-dark);
+  border-color: var(--coral);
+}
+
+/* ─── Skeleton loading cards ──────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--cream-dark) 25%,
+    var(--border-light) 50%,
+    var(--cream-dark) 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius);
+}
+
+.skeleton-img {
+  width: 100%;
+  height: 180px;
+  border-radius: 0;
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+  width: 80%;
+}
+
+.skeleton-text--lg {
+  height: 20px;
+  width: 55%;
+}
+
+.skeleton-text--sm {
+  width: 65%;
+  height: 12px;
+}
+
+/* ─── "Everyone's ready" banner ──────────────────────────────── */
+.all-ready-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border: 1.5px solid #34d399;
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  font-weight: 600;
+  color: #065f46;
+}
+
+[data-theme="dark"] .all-ready-banner {
+  background: linear-gradient(135deg, #052e16, #064e3b);
+  border-color: #065f46;
+  color: #6ee7b7;
+}
+
+.all-ready-banner-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.all-ready-banner-text strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.all-ready-banner-text span {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* ─── Tab badge ───────────────────────────────────────────────── */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--coral-light);
+  color: var(--coral);
+  margin-left: 5px;
+  line-height: 1;
+}
+
+.tab-btn.active .tab-badge {
+  background: var(--coral);
+  color: white;
+}
+
+.tab-badge--dot {
+  width: 8px;
+  min-width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  background: #22c55e;
+  margin-left: 5px;
+}
+
+/* ─── Trip countdown chip ────────────────────────────────────── */
+.trip-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--gradient-primary);
+  color: white;
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-glow);
+  margin-bottom: 1rem;
+}
+
+/* ─── Booking link button ────────────────────────────────────── */
+.book-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-body), inherit;
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+}
+.book-link:hover {
+  background: var(--accent);
+  color: white;
+  text-decoration: none;
+}
+
+/* ─── Already submitted edit notice ──────────────────────────── */
+.edit-prefs-notice {
+  background: var(--coral-light);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--coral);
+  margin-bottom: 1.25rem;
+}
+
+/* ─── Group name in navbar ───────────────────────────────────── */
+.nav-group-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--cream-dark);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Stage 2 divider ────────────────────────────────────────── */
+.plan-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  user-select: none;
+}
+.plan-divider::before,
+.plan-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.plan-divider-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+/* ─── Plan loading state ─────────────────────────────────────── */
+.plan-loading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 0 0.5rem;
+}
+.plan-loading-msg {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  font-style: italic;
+  transition: opacity 0.3s;
+}
+
+/* ─── Trip plan markdown output ──────────────────────────────── */
+.plan-output {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Each h2 starts a new card */
+.plan-section-card {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-light);
+  padding: 1.5rem 1.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.plan-section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-heading), system-ui, sans-serif;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.625rem;
+  border-bottom: 2px solid var(--coral-light);
+}
+
+/* Paragraphs, lists, etc. rendered inside the card — use adjacent sibling trick:
+   p/ul/li/table following a .plan-section-card get their own padding within the same card.
+   We achieve this differently: wrapping is done by the ReactMarkdown component mapping,
+   so we just style them as block elements. */
+.plan-h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 1rem 0 0.5rem;
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+
+.plan-p {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 0.75rem;
+}
+
+.plan-ul,
+.plan-ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.plan-li {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin-bottom: 0.35rem;
+}
+
+.plan-link {
+  color: var(--coral);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--transition-fast);
+}
+.plan-link:hover {
+  border-bottom-color: var(--coral);
+  text-decoration: none;
+}
+
+.plan-strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.plan-hr {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 1rem 0;
+}
+
+/* Budget table */
+.plan-table-wrap {
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+}
+.plan-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.plan-th {
+  background: var(--cream-dark);
+  color: var(--text);
+  font-weight: 700;
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.plan-td {
+  padding: 0.5rem 0.875rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-light);
+}
+.plan-table tr:last-child .plan-td {
+  border-bottom: none;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.plan-blockquote {
+  border-left: 3px solid var(--coral);
+  padding-left: 1rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0.75rem 0;
+}
+
+.plan-code {
+  background: var(--cream-dark);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: "Courier New", monospace;
+  font-size: 0.875em;
+}
+
+/* Dark mode overrides for plan */
+[data-theme="dark"] .plan-section-card {
+  background: var(--white);
+  border-color: var(--border);
+}
+[data-theme="dark"] .plan-th {
+  background: var(--cream);
+}
+[data-theme="dark"] .plan-td {
+  border-bottom-color: var(--border);
+}
+[data-theme="dark"] .plan-code {
+  background: var(--cream);
+}
+
+/* Print styles */
+@media print {
+  .navbar, .tab-bar, .match-trigger, .plan-divider-label,
+  .btn, .vote-btn, .book-link, .dark-toggle, .currency-select {
+    display: none !important;
+  }
+  .plan-section-card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+  body { background: white; }
+}
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .landing-inner { padding: 3.5rem 1.5rem 5rem; align-items: center; }
